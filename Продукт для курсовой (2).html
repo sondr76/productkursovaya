@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Focus Flow — премиальный дизайн</title>
+    <style>
+        /* ===== СБРОС И ПЕРЕМЕННЫЕ ===== */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --bg-dark: #0b0d15;
+            --bg-panel: rgba(18, 22, 33, 0.75);
+            --accent-focus: #ff5e57;
+            --accent-relax: #4a90e2;
+            --glow-focus: 0 0 30px rgba(255, 94, 87, 0.4);
+            --glow-relax: 0 0 30px rgba(74, 144, 226, 0.4);
+            --text-primary: #f0f4fa;
+            --text-secondary: #a0b3d9;
+            --border-light: rgba(255, 255, 255, 0.08);
+            --transition-smooth: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg-dark);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Фоновый эффект (градиент + шум) */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 30% 40%, rgba(255, 94, 87, 0.08) 0%, transparent 30%),
+                radial-gradient(circle at 70% 60%, rgba(74, 144, 226, 0.08) 0%, transparent 35%),
+                repeating-linear-gradient(45deg, rgba(255,255,255,0.01) 0px, rgba(255,255,255,0.01) 1px, transparent 1px, transparent 12px);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* ===== ОСНОВНОЙ КОНТЕЙНЕР ===== */
+        .app {
+            max-width: 1300px;
+            width: 100%;
+            background: var(--bg-panel);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border-radius: 48px;
+            border: 1px solid var(--border-light);
+            box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.6), inset 0 0 0 1px rgba(255,255,255,0.02);
+            display: flex;
+            flex-wrap: wrap;
+            overflow: hidden;
+        }
+
+        /* ===== ЛЕВАЯ ЧАСТЬ – ВИЗУАЛИЗАЦИЯ ===== */
+        .visual {
+            flex: 1.2;
+            min-width: 380px;
+            background: #0f121c;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            position: relative;
+            transition: background 0.5s ease;
+            border-right: 1px solid var(--border-light);
+        }
+
+        /* Контейнер круга */
+        .circle-container {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 0 30px rgba(0,0,0,0.5));
+        }
+
+        /* Круг */
+        .circle {
+            width: 240px;
+            height: 240px;
+            background: hsl(0, 80%, 60%);
+            border-radius: 50%;
+            box-shadow: 0 0 60px currentColor;
+            transition: background 0.3s ease, box-shadow 0.3s ease;
+            animation: pulse 2s infinite ease-in-out;
+            position: relative;
+            z-index: 2;
+            will-change: transform, filter;
+        }
+
+        /* Волна (бегущий свет) – улучшенный эффект */
+        .circle::after {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            right: -20px;
+            bottom: -20px;
+            border-radius: 50%;
+            border: 2px solid transparent;
+            background: conic-gradient(from 0deg, transparent, rgba(255,255,255,0.9), rgba(255,180,180,0.5), transparent) border-box;
+            -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            opacity: 0;
+            transition: opacity 0.4s;
+            pointer-events: none;
+        }
+
+        .circle.wave-active::after {
+            opacity: 1;
+            animation: rotate 4s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); filter: brightness(1); }
+            50% { transform: scale(var(--intensity, 1.1)); filter: brightness(1.1); }
+            100% { transform: scale(1); filter: brightness(1); }
+        }
+
+        /* Таймер */
+        .timer {
+            margin-top: 40px;
+            color: white;
+            font-size: 3.5rem;
+            font-weight: 200;
+            letter-spacing: 8px;
+            text-shadow: 0 0 30px currentColor;
+            background: rgba(0,0,0,0.3);
+            padding: 12px 28px;
+            border-radius: 80px;
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.1);
+            line-height: 1;
+        }
+
+        /* ===== ПРАВАЯ ЧАСТЬ – ПАНЕЛЬ УПРАВЛЕНИЯ ===== */
+        .controls {
+            flex: 0.8;
+            min-width: 320px;
+            background: rgba(10, 14, 23, 0.7);
+            backdrop-filter: blur(20px);
+            padding: 40px 32px;
+            color: var(--text-primary);
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            overflow-y: auto;
+            max-height: 700px;
+        }
+
+        .controls h2 {
+            font-weight: 300;
+            font-size: 2.2rem;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #fff, #c0d0ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 16px;
+            margin-bottom: 8px;
+        }
+
+        /* Переключатели режимов */
+        .mode-switch {
+            display: flex;
+            gap: 12px;
+            background: rgba(0,0,0,0.25);
+            padding: 6px;
+            border-radius: 60px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .mode-btn {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 12px 8px;
+            border-radius: 40px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: var(--transition-smooth);
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            backdrop-filter: blur(4px);
+        }
+
+        .mode-btn.active {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            box-shadow: 0 0 20px rgba(255,255,255,0.2);
+        }
+
+        .mode-btn.focus.active {
+            background: var(--accent-focus);
+            box-shadow: var(--glow-focus);
+        }
+
+        .mode-btn.relax.active {
+            background: var(--accent-relax);
+            box-shadow: var(--glow-relax);
+        }
+
+        /* Элементы управления */
+        .control-item {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-item label {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .value-badge {
+            background: rgba(255,255,255,0.08);
+            padding: 4px 12px;
+            border-radius: 40px;
+            font-size: 0.8rem;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Стилизация range слайдеров */
+        input[type=range] {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 20px;
+            -webkit-appearance: none;
+            outline: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 22px;
+            height: 22px;
+            background: white;
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 20px currentColor, 0 2px 8px black;
+            border: 2px solid rgba(255,255,255,0.5);
+            transition: 0.1s;
+        }
+
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+
+        /* Селект (выпадающий список) */
+        select {
+            background: rgba(20, 25, 38, 0.8);
+            color: white;
+            padding: 14px 18px;
+            border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.1);
+            font-size: 0.95rem;
+            backdrop-filter: blur(4px);
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><polyline points='6 9 12 15 18 9'/></svg>");
+            background-repeat: no-repeat;
+            background-position: right 18px center;
+            background-size: 14px;
+        }
+
+        /* Чекбокс */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            background: rgba(20, 25, 38, 0.4);
+            padding: 12px 18px;
+            border-radius: 40px;
+            border: 1px solid rgba(255,255,255,0.05);
+            backdrop-filter: blur(4px);
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            accent-color: var(--accent-focus);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        /* Кнопка запуска таймера */
+        .start-btn {
+            background: linear-gradient(135deg, #3a8b5e, #2c6e4f);
+            border: none;
+            color: white;
+            padding: 20px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            border-radius: 60px;
+            cursor: pointer;
+            letter-spacing: 2px;
+            margin-top: 16px;
+            transition: var(--transition-smooth);
+            box-shadow: 0 10px 20px -8px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
+            text-transform: uppercase;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .start-btn:hover {
+            background: linear-gradient(135deg, #42a06b, #328055);
+            transform: translateY(-3px);
+            box-shadow: 0 20px 25px -10px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.2);
+        }
+
+        .start-btn:active {
+            transform: translateY(0);
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            opacity: 0.6;
+            letter-spacing: 1px;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 800px) {
+            .app {
+                flex-direction: column;
+                border-radius: 36px;
+            }
+            .visual {
+                border-right: none;
+                border-bottom: 1px solid var(--border-light);
+            }
+            .controls {
+                max-height: none;
+            }
+            .timer {
+                font-size: 2.8rem;
+                letter-spacing: 5px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .circle-container {
+                width: 260px;
+                height: 260px;
+            }
+            .circle {
+                width: 180px;
+                height: 180px;
+            }
+            .controls {
+                padding: 30px 20px;
+            }
+        }
+
+        /* Микро-анимации для интерактивных элементов */
+        .mode-btn, .start-btn, select, .checkbox-group {
+            transition: all 0.25s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+        <!-- Левая часть -->
+        <div class="visual" id="visualBackground">
+            <div class="circle-container">
+                <div class="circle" id="mainCircle"></div>
+            </div>
+            <div class="timer" id="timerDisplay">05:00</div>
+        </div>
+
+        <!-- Правая панель -->
+        <div class="controls">
+            <h2>Focus Flow</h2>
+
+            <!-- Режимы -->
+            <div class="mode-switch">
+                <button class="mode-btn focus active" id="modeFocus">⚡ Фокус</button>
+                <button class="mode-btn relax" id="modeRelax">🌀 Релакс</button>
+            </div>
+
+            <!-- Цвет: слайдер тона -->
+            <div class="control-item">
+                <label>🎨 Тон (Hue) <span id="hueValue" class="value-badge">0°</span></label>
+                <input type="range" id="hueSlider" min="0" max="360" value="0" step="1">
+            </div>
+
+            <!-- Анимация: скорость -->
+            <div class="control-item">
+                <label>⏱️ Скорость пульса <span id="speedValue" class="value-badge">2.0 с</span></label>
+                <input type="range" id="speedSlider" min="0.3" max="6.0" value="2.0" step="0.1">
+            </div>
+
+            <!-- Интенсивность (масштаб) -->
+            <div class="control-item">
+                <label>📈 Интенсивность <span id="intensityValue" class="value-badge">1.1</span></label>
+                <input type="range" id="intensitySlider" min="1.0" max="1.5" value="1.1" step="0.01">
+            </div>
+
+            <!-- Волна (чекбокс) -->
+            <div class="checkbox-group">
+                <input type="checkbox" id="waveCheckbox">
+                <label for="waveCheckbox">🌊 Волна (бегущий свет)</label>
+            </div>
+
+            <!-- Звук: громкость -->
+            <div class="control-item">
+                <label>🔊 Громкость <span id="volumeValue" class="value-badge">50%</span></label>
+                <input type="range" id="volumeSlider" min="0" max="1" value="0.5" step="0.01">
+            </div>
+
+            <!-- Тембр -->
+            <div class="control-item">
+                <label>🎵 Тембр</label>
+                <select id="timbreSelect">
+                    <option value="click" selected>👆 Щелчок</option>
+                    <option value="bell">🔔 Колокольчик</option>
+                    <option value="noise">💨 Шум ветра</option>
+                </select>
+            </div>
+
+            <!-- Гармония -->
+            <div class="checkbox-group">
+                <input type="checkbox" id="harmonyCheckbox">
+                <label for="harmonyCheckbox">🎼 Гармония (звук зависит от цвета)</label>
+            </div>
+
+            <!-- Таймер и старт -->
+            <button class="start-btn" id="startBtn"><span>▶</span> Запустить таймер</button>
+            <footer>Цвет · Звук · Анимация</footer>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            // --- Элементы DOM ---
+            const visualBg = document.getElementById('visualBackground');
+            const mainCircle = document.getElementById('mainCircle');
+            const timerDisplay = document.getElementById('timerDisplay');
+
+            const modeFocus = document.getElementById('modeFocus');
+            const modeRelax = document.getElementById('modeRelax');
+
+            const hueSlider = document.getElementById('hueSlider');
+            const hueValue = document.getElementById('hueValue');
+            const speedSlider = document.getElementById('speedSlider');
+            const speedValue = document.getElementById('speedValue');
+            const intensitySlider = document.getElementById('intensitySlider');
+            const intensityValue = document.getElementById('intensityValue');
+            const volumeSlider = document.getElementById('volumeSlider');
+            const volumeValue = document.getElementById('volumeValue');
+
+            const waveCheckbox = document.getElementById('waveCheckbox');
+            const timbreSelect = document.getElementById('timbreSelect');
+            const harmonyCheckbox = document.getElementById('harmonyCheckbox');
+            const startBtn = document.getElementById('startBtn');
+
+            // --- Состояние приложения ---
+            let currentMode = 'focus';
+            let currentHue = 0;
+            let isTimerRunning = false;
+            let timerInterval = null;
+            let timeSeconds = 5 * 60;
+            let audioCtx = null;
+            let timerBeatInterval = null;
+
+            // --- Инициализация AudioContext при первом взаимодействии ---
+            function initAudio() {
+                if (audioCtx) return;
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            }
+
+            // --- Генерация звука ---
+            function playBeat() {
+                if (!audioCtx) initAudio();
+                if (audioCtx.state !== 'running') return;
+                if (volumeSlider.value == 0) return;
+
+                const volume = parseFloat(volumeSlider.value);
+                const timbre = timbreSelect.value;
+                const harmony = harmonyCheckbox.checked;
+
+                let baseFreq = 440;
+                if (harmony) {
+                    baseFreq = 200 + (currentHue / 360) * 600;
+                } else {
+                    baseFreq = currentMode === 'focus' ? 520 : 360;
+                }
+
+                if (timbre === 'click') {
+                    const clickDur = 0.02;
+                    const bufferSize = audioCtx.sampleRate * clickDur;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = (Math.random() * 2 - 1) * Math.exp(-5 * i / bufferSize);
+                    }
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = buffer;
+                    const gainNode = audioCtx.createGain();
+                    gainNode.gain.value = volume * 0.3;
+                    source.connect(gainNode).connect(audioCtx.destination);
+                    source.start();
+                } else if (timbre === 'bell') {
+                    const osc = audioCtx.createOscillator();
+                    const gainNode = audioCtx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = baseFreq;
+                    gainNode.gain.value = volume * 0.5;
+                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+                    osc.connect(gainNode).connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                } else if (timbre === 'noise') {
+                    const bufferSize = audioCtx.sampleRate * 0.2;
+                    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                    const noise = audioCtx.createBufferSource();
+                    noise.buffer = buffer;
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.value = 800;
+                    const gainNode = audioCtx.createGain();
+                    gainNode.gain.value = volume * 0.2;
+                    noise.connect(filter).connect(gainNode).connect(audioCtx.destination);
+                    noise.start();
+                    noise.stop(audioCtx.currentTime + 0.2);
+                }
+            }
+
+            // --- Применение цвета ---
+            function applyColor() {
+                const hue = currentHue;
+                const saturation = 80;
+                const lightness = 60;
+                const color = `hsl(${hue}, ${saturation}%, ${lightness}%)`;
+
+                mainCircle.style.background = color;
+                mainCircle.style.boxShadow = `0 0 70px ${color}`;
+                visualBg.style.background = `radial-gradient(circle at center, ${color}20, #0f121c)`;
+            }
+
+            // --- Применение анимации (скорость, интенсивность) ---
+            function applyAnimation() {
+                const speed = parseFloat(speedSlider.value);
+                const intensity = parseFloat(intensitySlider.value);
+                // Обновляем CSS-переменную для интенсивности
+                mainCircle.style.setProperty('--intensity', intensity);
+                mainCircle.style.animation = `pulse ${speed}s infinite ease-in-out`;
+            }
+
+            // --- Волна ---
+            function applyWave() {
+                if (waveCheckbox.checked) {
+                    mainCircle.classList.add('wave-active');
+                } else {
+                    mainCircle.classList.remove('wave-active');
+                }
+            }
+
+            // --- Обновление таймера ---
+            function updateTimerDisplay() {
+                const mins = Math.floor(timeSeconds / 60);
+                const secs = timeSeconds % 60;
+                timerDisplay.textContent = `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+            }
+
+            // --- Запуск/остановка таймера ---
+            function startTimer() {
+                if (isTimerRunning) {
+                    clearInterval(timerInterval);
+                    clearInterval(timerBeatInterval);
+                    isTimerRunning = false;
+                    startBtn.innerHTML = '<span>▶</span> Запустить таймер';
+                    return;
+                }
+
+                initAudio();
+                if (audioCtx && audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                isTimerRunning = true;
+                startBtn.innerHTML = '<span>⏸</span> Пауза';
+
+                timeSeconds = 5 * 60;
+                updateTimerDisplay();
+
+                timerInterval = setInterval(() => {
+                    if (timeSeconds > 0) {
+                        timeSeconds--;
+                        updateTimerDisplay();
+                    } else {
+                        clearInterval(timerInterval);
+                        clearInterval(timerBeatInterval);
+                        isTimerRunning = false;
+                        startBtn.innerHTML = '<span>▶</span> Запустить таймер';
+                    }
+                }, 1000);
+
+                const speed = parseFloat(speedSlider.value);
+                timerBeatInterval = setInterval(() => {
+                    if (isTimerRunning) {
+                        playBeat();
+                    }
+                }, speed * 1000 / 2);
+            }
+
+            // --- Обработчики событий ---
+            hueSlider.addEventListener('input', function() {
+                currentHue = parseInt(this.value);
+                hueValue.textContent = currentHue + '°';
+                applyColor();
+            });
+
+            speedSlider.addEventListener('input', function() {
+                const val = parseFloat(this.value).toFixed(1);
+                speedValue.textContent = val + ' с';
+                applyAnimation();
+                if (isTimerRunning) {
+                    clearInterval(timerBeatInterval);
+                    const speed = parseFloat(speedSlider.value);
+                    timerBeatInterval = setInterval(() => {
+                        if (isTimerRunning) playBeat();
+                    }, speed * 1000 / 2);
+                }
+            });
+
+            intensitySlider.addEventListener('input', function() {
+                const val = parseFloat(this.value).toFixed(2);
+                intensityValue.textContent = val;
+                applyAnimation();
+            });
+
+            volumeSlider.addEventListener('input', function() {
+                const val = Math.round(parseFloat(this.value) * 100);
+                volumeValue.textContent = val + '%';
+            });
+
+            waveCheckbox.addEventListener('change', applyWave);
+
+            modeFocus.addEventListener('click', function() {
+                currentMode = 'focus';
+                modeFocus.classList.add('active');
+                modeRelax.classList.remove('active');
+                currentHue = 10;
+                hueSlider.value = currentHue;
+                hueValue.textContent = currentHue + '°';
+                applyColor();
+            });
+
+            modeRelax.addEventListener('click', function() {
+                currentMode = 'relax';
+                modeRelax.classList.add('active');
+                modeFocus.classList.remove('active');
+                currentHue = 200;
+                hueSlider.value = currentHue;
+                hueValue.textContent = currentHue + '°';
+                applyColor();
+            });
+
+            startBtn.addEventListener('click', startTimer);
+
+            // Начальные установки
+            applyColor();
+            applyAnimation();
+            updateTimerDisplay();
+
+            // Показываем начальное состояние (нейтральное) на долю секунды, затем включаем цвет
+            setTimeout(() => {
+                applyColor();
+                applyAnimation();
+            }, 100);
+
+            // Активация аудио по первому клику где угодно
+            document.body.addEventListener('click', function once() {
+                if (!audioCtx) {
+                    initAudio();
+                } else if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+            }, { once: true });
+
+        })();
+    </script>
+</body>
+</html>
